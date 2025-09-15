@@ -9,6 +9,6 @@ pub struct User {
     pub username: String,
     pub email: String,
     pub password_hash: String,
-    pub created_at: Option<PrimitiveDateTime>,
+    pub created_at: PrimitiveDateTime,
 }
 
