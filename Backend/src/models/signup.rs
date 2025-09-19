@@ -1,3 +1,5 @@
+use serde::Deserialize;
+
 // Register Data
 #[derive(Deserialize)]
 pub struct RegisterPayload {

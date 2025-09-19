@@ -1,15 +1,14 @@
-use sqlx::{PgPool, PgPoolOptions};
+use sqlx::{Pool, Postgres};
 use std::env;
-use std::time::Duration;
+
 
 // Creates a connection to the database
-pub async fn establish_connection() -> PgPool {
+pub async fn establish_connection() -> Pool<Postgres> {
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
-    PgPoolOptions::new()
+    sqlx::postgres::PgPoolOptions::new()
         .max_connections(5)
-        .connect_timeout(Duration::from_secs(5))
-        .connect(database_url)
+        .connect(&database_url)
         .await
-        .expect("Failed to connect to database");
+        .expect("Failed to connect to database")
 }

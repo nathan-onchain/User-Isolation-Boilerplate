@@ -1,3 +1,5 @@
+use serde::Deserialize;
+
 // Login Data
 #[derive(Deserialize)]
 pub struct LoginPayload {
