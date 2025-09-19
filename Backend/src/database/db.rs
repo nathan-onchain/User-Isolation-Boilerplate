@@ -3,7 +3,7 @@ use std::env;
 use std::time::Duration;
 
 // Creates a connection to the database
-fn establish_connection() -> PgPool {
+pub async fn establish_connection() -> PgPool {
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
     PgPoolOptions::new()

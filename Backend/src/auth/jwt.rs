@@ -2,12 +2,8 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use std::env;
+use crate::models::claims::Claims;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Claims {
-    pub sub: String, // user id
-    pub exp: i64,
-}
 
 pub fn create_jwt(user_id: &str) -> anyhow::Result<String> {
     let secret = env::var("JWT_SECRET")?;
