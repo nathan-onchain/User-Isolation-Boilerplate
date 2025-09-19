@@ -6,7 +6,7 @@ use uuid::Uuid;
 use argon2::{Argon2, PasswordHasher};
 use argon2::password_hash::{SaltString, rand_core::OsRng};
 use crate::auth::jwt::create_jwt;
-// Session removed - using JWT-only authentication
+use crate::auth::validation::validate_register_payload;
 use crate::models::signup::RegisterPayload;
 use crate::auth::cookies::set_access_token;
 
@@ -19,9 +19,15 @@ pub async fn register(
     pool: web::Data<Pool<Postgres>>,
     payload: web::Json<RegisterPayload>,
 ) -> impl Responder {
-    // basic validation
-    if payload.password.len() < 8 {
-        return HttpResponse::BadRequest().body("password too short");
+    // Comprehensive input validation
+    match validate_register_payload(&payload.username, &payload.email, &payload.password) {
+        Ok(_) => {},
+        Err(validation_errors) => {
+            return HttpResponse::BadRequest().json(serde_json::json!({
+                "error": "Validation failed",
+                "details": validation_errors
+            }));
+        }
     }
 
     // hash password

@@ -14,12 +14,13 @@ pub fn cors() -> Cors {
         .collect();
 
     if environment != "production" || allowed_origins.is_empty() {
-        // Development or no explicit origins: permissive (no credentials)
+        // Development or no explicit origins: permissive with credentials
         return Cors::default()
             .allow_any_origin()
             .allowed_methods(["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]) 
             .allowed_headers([header::AUTHORIZATION, header::ACCEPT, header::CONTENT_TYPE])
             .expose_any_header()
+            .supports_credentials()
             .max_age(3600);
     }
 
