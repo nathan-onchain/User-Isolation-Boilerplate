@@ -37,7 +37,13 @@ pub async fn login(
 
     let row = match rec {
         Some(r) => r,
-        None => return HttpResponse::Unauthorized().body("Invalid credentials"),
+        None => {
+            // Log failed login attempt for security monitoring
+            tracing::warn!("Failed login attempt for email: {}", payload.email);
+            return HttpResponse::Unauthorized().json(serde_json::json!({
+                "error": "Invalid credentials"
+            }));
+        }
     };
 
     // verify password (argon2 PasswordHash)
@@ -45,8 +51,13 @@ pub async fn login(
         Ok(p) => p,
         Err(_) => return HttpResponse::InternalServerError().finish(),
     };
+    
     if Argon2::default().verify_password(payload.password.as_bytes(), &parsed).is_err() {
-        return HttpResponse::Unauthorized().body("Invalid credentials");
+        // Log failed login attempt for security monitoring
+        tracing::warn!("Failed login attempt for email: {}", payload.email);
+        return HttpResponse::Unauthorized().json(serde_json::json!({
+            "error": "Invalid credentials"
+        }));
     }
 
     // create JWT

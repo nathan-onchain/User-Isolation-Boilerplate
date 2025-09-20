@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const Register: React.FC = () => {
@@ -50,9 +51,17 @@ const Register: React.FC = () => {
         password: formData.password,
       });
       navigate('/dashboard');
-    } catch (err: any) {
-      if (err.response?.status === 409) {
-        setError('An account with this email already exists');
+    } catch (err: unknown) {
+      console.error('Registration failed:', err);
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosError = err as { response?: { status: number } };
+        if (axiosError.response?.status === 409) {
+          setError('An account with this email already exists');
+        } else if (axiosError.response?.status === 400) {
+          setError('Invalid input. Please check your information.');
+        } else {
+          setError('Registration failed. Please try again.');
+        }
       } else {
         setError('Registration failed. Please try again.');
       }
@@ -104,10 +113,9 @@ const Register: React.FC = () => {
               <label htmlFor="password" className="text-sm font-medium">
                 Password
               </label>
-              <Input
+              <PasswordInput
                 id="password"
                 name="password"
-                type="password"
                 required
                 value={formData.password}
                 onChange={handleChange}
@@ -118,10 +126,9 @@ const Register: React.FC = () => {
               <label htmlFor="confirmPassword" className="text-sm font-medium">
                 Confirm Password
               </label>
-              <Input
+              <PasswordInput
                 id="confirmPassword"
                 name="confirmPassword"
-                type="password"
                 required
                 value={formData.confirmPassword}
                 onChange={handleChange}

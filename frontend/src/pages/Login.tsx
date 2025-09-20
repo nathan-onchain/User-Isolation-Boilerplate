@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const Login: React.FC = () => {
@@ -33,14 +34,24 @@ const Login: React.FC = () => {
       await login(formData);
       console.log('Login page: Login successful, navigating to dashboard');
       navigate('/dashboard');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Login page: Login failed:', err);
-      if (err.response?.status === 401) {
-        setError('Invalid email or password. Please check your credentials.');
-      } else if (err.response?.status === 404) {
-        setError('User not found. Please check your email address.');
-      } else if (err.code === 'ERR_NETWORK') {
-        setError('Network error. Please check if the server is running.');
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosError = err as { response?: { status: number } };
+        if (axiosError.response?.status === 401) {
+          setError('Invalid email or password. Please check your credentials.');
+        } else if (axiosError.response?.status === 404) {
+          setError('User not found. Please check your email address.');
+        } else {
+          setError('Login failed. Please try again.');
+        }
+      } else if (err && typeof err === 'object' && 'code' in err) {
+        const networkError = err as { code: string };
+        if (networkError.code === 'ERR_NETWORK') {
+          setError('Network error. Please check if the server is running.');
+        } else {
+          setError('Login failed. Please try again.');
+        }
       } else {
         setError('Login failed. Please try again.');
       }
@@ -78,10 +89,9 @@ const Login: React.FC = () => {
               <label htmlFor="password" className="text-sm font-medium">
                 Password
               </label>
-              <Input
+              <PasswordInput
                 id="password"
                 name="password"
-                type="password"
                 required
                 value={formData.password}
                 onChange={handleChange}

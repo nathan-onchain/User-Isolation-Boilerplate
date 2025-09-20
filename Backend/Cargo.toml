@@ -23,4 +23,6 @@ jsonwebtoken = "9"
 argon2 = "0.5"
 time = { version = "0.3", features = ["serde"] }
 regex = "1.10"
+validator = { version = "0.16", features = ["derive"] }
+once_cell = "1.19"
 

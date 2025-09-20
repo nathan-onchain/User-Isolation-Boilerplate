@@ -3,6 +3,8 @@ use actix_cors::Cors;
 use actix_web::http::header;
 use std::env;
 
+pub mod security;
+
 pub fn cors() -> Cors {
     // Environment-driven CORS: allow all in non-production; restrict in production via CORS_ALLOWED_ORIGINS
     let environment = env::var("RUST_ENV").ok().unwrap_or_else(|| "development".to_string());

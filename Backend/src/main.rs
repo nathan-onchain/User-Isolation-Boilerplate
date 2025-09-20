@@ -14,6 +14,7 @@ use database::db::establish_connection;
 use config::cors;
 use auth::middleware::AuthMiddleware;
 use middleware::security::SecurityHeadersMiddleware;
+use middleware::rate_limit::RateLimitMiddleware;
 use routes::auth_routes::public_routes;
 
 #[actix_web::main]
@@ -45,6 +46,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(pool.clone()))
             .wrap(SecurityHeadersMiddleware) // Add security headers
             .wrap(cors()) // Add CORS middleware
+            .wrap(RateLimitMiddleware::auth_endpoints()) // Add rate limiting for auth endpoints
             .wrap(AuthMiddleware)// Add authentication middleware to all routes
             .wrap(Logger::default()) // Add logging middleware
             .service(public_routes())// Register public routes (auth endpoints, health check)
