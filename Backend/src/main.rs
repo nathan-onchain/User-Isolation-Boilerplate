@@ -9,9 +9,10 @@ mod config;
 mod services;
 mod routes;
 mod middleware;
+mod utils;
 
 use database::db::establish_connection;
-use config::cors;
+use config::cors::cors;
 use auth::middleware::AuthMiddleware;
 use middleware::security::SecurityHeadersMiddleware;
 use middleware::rate_limit::RateLimitMiddleware;
@@ -44,12 +45,12 @@ async fn main() -> std::io::Result<()> {
         App::new()
             // Add database pool to app data
             .app_data(web::Data::new(pool.clone()))
-            .wrap(SecurityHeadersMiddleware) // Add security headers
-            .wrap(cors()) // Add CORS middleware
-            .wrap(RateLimitMiddleware::auth_endpoints()) // Add rate limiting for auth endpoints
-            .wrap(AuthMiddleware)// Add authentication middleware to all routes
-            .wrap(Logger::default()) // Add logging middleware
-            .service(public_routes())// Register public routes (auth endpoints, health check)
+            .wrap(Logger::default()) //1. Add logging middleware
+            .wrap(SecurityHeadersMiddleware) //2. Add security headers
+            .wrap(cors()) //3. Add CORS middleware
+            .wrap(RateLimitMiddleware::auth_endpoints()) //4. Add rate limiting for auth endpoints
+            .wrap(AuthMiddleware)//5. Add authentication middleware to all routes
+            .service(public_routes())//6. Register public routes (auth endpoints, health check)
             
             // Add protected routes here
             // .service(protected_routes())

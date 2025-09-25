@@ -1,14 +1,15 @@
 use actix_web::{post, web, HttpResponse, Responder};
 use sqlx::Pool;
 use sqlx::Postgres;
-use crate::models::user::User;
 use uuid::Uuid;
-use argon2::{Argon2, PasswordHasher};
-use argon2::password_hash::{SaltString, rand_core::OsRng};
+
+
 use crate::auth::jwt::create_jwt;
 use crate::auth::validation::validate_register_payload;
 use crate::models::signup::RegisterPayload;
+use crate::models::user::User;
 use crate::auth::cookies::set_access_token;
+use crate::utils::hash::{hash_password};
 
 
 
@@ -31,15 +32,12 @@ pub async fn register(
     }
 
     // hash password
-    let salt = SaltString::generate(&mut OsRng);
-    let argon2 = Argon2::default();
-    let password_hash = argon2.hash_password(payload.password.as_bytes(), &salt)
-        .map(|ph| ph.to_string())
-        .map_err(|_| HttpResponse::InternalServerError().finish());
-
-    let password_hash = match password_hash {
+    let password_hash = match hash_password(&payload.password) {
         Ok(h) => h,
-        Err(e) => return e,
+        Err(e) => {
+            tracing::error!("hashing error: {}", e);
+            return HttpResponse::InternalServerError().finish();
+        }
     };
 
     // insert user and return full record

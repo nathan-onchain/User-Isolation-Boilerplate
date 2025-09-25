@@ -1,12 +1,14 @@
 use actix_web::{post, web, HttpResponse, Responder};
 use sqlx::Pool;
 use sqlx::Postgres;
-use argon2::{Argon2, PasswordVerifier};
-use argon2::password_hash::PasswordHash;
+
+
+
 use crate::auth::jwt::create_jwt;
 use crate::auth::validation::validate_login_payload;
 use crate::models::login::LoginPayload;
 use crate::auth::cookies::set_access_token;
+use crate::utils::hash::verify_password;
 
 
 
@@ -47,18 +49,20 @@ pub async fn login(
     };
 
     // verify password (argon2 PasswordHash)
-    let parsed = match PasswordHash::new(&row.password_hash) {
-        Ok(p) => p,
-        Err(_) => return HttpResponse::InternalServerError().finish(),
-    };
-    
-    if Argon2::default().verify_password(payload.password.as_bytes(), &parsed).is_err() {
-        // Log failed login attempt for security monitoring
-        tracing::warn!("Failed login attempt for email: {}", payload.email);
-        return HttpResponse::Unauthorized().json(serde_json::json!({
-            "error": "Invalid credentials"
-        }));
+    match verify_password(&payload.password, &row.password_hash) {
+        Ok(true) => {} // Password correct - Continue
+        Ok(false) => {
+            tracing::warn!("Failed login attempt for email: {}", payload.email);
+            return HttpResponse::Unauthorized().json(serde_json::json!({
+                "error": "Invalid credentials"
+            }));
+        }
+        Err(e) => {
+            tracing::error!("Password verification error: {}", e);
+            return HttpResponse::InternalServerError().finish();
+        }
     }
+
 
     // create JWT
     let token = match create_jwt(&row.id.to_string()) {
@@ -66,7 +70,6 @@ pub async fn login(
         Err(_) => return HttpResponse::InternalServerError().finish(),
     };
 
-        // JWT-only authentication - no session cleanup needed
 
     // Send JWT as HTTP-only cookie
     HttpResponse::Ok()

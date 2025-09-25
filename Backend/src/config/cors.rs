@@ -3,7 +3,6 @@ use actix_cors::Cors;
 use actix_web::http::header;
 use std::env;
 
-pub mod security;
 
 pub fn cors() -> Cors {
     // Environment-driven CORS: allow all in non-production; restrict in production via CORS_ALLOWED_ORIGINS
@@ -26,7 +25,7 @@ pub fn cors() -> Cors {
             .max_age(3600);
     }
 
-    // Production with explicit origins: restrict to the list and allow credentials
+    // Production with expli:cit origins: restrict to the list and allow credentials
     let mut cors = Cors::default()
         .allowed_methods(["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]) 
         .allowed_headers([header::AUTHORIZATION, header::ACCEPT, header::CONTENT_TYPE])
