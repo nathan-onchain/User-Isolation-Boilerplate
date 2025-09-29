@@ -12,6 +12,7 @@ mod middleware;
 mod utils;
 
 use database::db::establish_connection;
+use config::otp::OtpConfig;
 use config::cors::cors;
 use auth::middleware::AuthMiddleware;
 use middleware::security::SecurityHeadersMiddleware;
@@ -29,7 +30,8 @@ async fn main() -> std::io::Result<()> {
     // Create database connection pool
     let pool = establish_connection().await;
 
-    // Session management removed - using JWT-only authentication
+    // otp variable
+    let otp_config = OtpConfig::from_env;
 
     // Get server configuration
     let host = env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
@@ -45,6 +47,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             // Add database pool to app data
             .app_data(web::Data::new(pool.clone()))
+            .app_data(web::Data::new(otp_config.clone()))
             .wrap(Logger::default()) //1. Add logging middleware
             .wrap(SecurityHeadersMiddleware) //2. Add security headers
             .wrap(cors()) //3. Add CORS middleware

@@ -7,3 +7,5 @@ CREATE TABLE users (
 );
 
 CREATE INDEX idx_users_email ON users(email);
+
+ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE;

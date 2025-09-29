@@ -8,9 +8,10 @@ use sqlx::Postgres;
 use crate::models::reset::{ResetRequest, ResetVerifyPayload};
 use crate::utils::hash::hash_password;
 use crate::utils::otp::{generate_otp, send_otp_email};
+use crate::config::otp::OtpConfig;
 
 #[post("/reset/request")]
-pub async fn reset_request(pool: web::Data<Pool<Postgres>>, data: web::Json<ResetRequest>) -> impl Responder {
+pub async fn reset_request(pool: web::Data<Pool<Postgres>>, data: web::Json<ResetRequest>, otp_config: web::Data<OtpConfig>,) -> impl Responder {
     let email = data.email.to_lowercase();
 
     // 1. Check if user exists (but do not reveal result!)
@@ -22,6 +23,44 @@ pub async fn reset_request(pool: web::Data<Pool<Postgres>>, data: web::Json<Rese
         Ok(Some(record)) => {
             let user_id = record.id;
 
+            // Rate limiting
+            // 1a. Check if more than 5 OTP requests in last hour
+            let count_last_hour: (i64,) = sqlx::query_as(
+                "SELECT COUNT(*) FROM password resets
+                WHERE user_id = $1
+                AND requested_at > NOW() - INTERVAL '1 hour'"
+            )
+            .bind(user_id)
+            .fetch_one(pool.get_ref())
+            .await
+            .unwrap_or((0,));
+
+            if count_last_hour.0 >= otp_config.limit_per_hour {
+                return HttpResponse::TooManyRequests().json(serde_json::json!({
+                    "error": "Too many reset requests. Try again later."
+                }));
+            }
+
+            // 1b. Chech last request < 1 minute ago
+            if let Ok(Some((last_request,))) = sqlx::query_as::<_, (chrono::NaiveDateTime,)>(
+            "SELECT requested_at 
+                FROM password_resets 
+                WHERE user_id = $1 
+                ORDER BY requested_at DESC 
+                LIMIT 1"
+            )
+            .bind(user_id)
+            .fetch_optional(pool.get_ref())
+            .await
+            {
+                let now = Utc::now().naive_utc();
+                if now.signed_duration_since(last_request) < Duration::minutes(1) {
+                    return HttpResponse::TooManyRequests().json(serde_json::json!({
+                        "error": "Please wait at least 1 minute before requesting another OTP."
+                    }));
+                }
+            }
+
             // 2. Generate OTP
             let otp = generate_otp();
             let expires_at = Utc::now() + Duration::minutes(10);
@@ -29,9 +68,7 @@ pub async fn reset_request(pool: web::Data<Pool<Postgres>>, data: web::Json<Rese
             // 3. Store OTP in password_resets table
             let query = r#"
                 INSERT INTO password_resets (user_id, otp_code, expires_at, used)
-                VALUES ($1, $2, $3, FALSE)
-                ON CONFLICT (user_id) DO UPDATE
-                SET otp_code = $2, expires_at = $3, used = FALSE
+                VALUES ($1, $2, $3, FALSE, Now())
             "#;
 
             if let Err(e) = sqlx::query(query)
